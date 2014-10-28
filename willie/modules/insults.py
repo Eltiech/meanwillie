@@ -48,4 +48,4 @@ thanks.rule = r'.*$nickname(?!(\:\s+|\,\s+)((ask|tell|help|reload|doc)|(((af|sq|
 thanks.priority = 'high'
 
 if __name__ == '__main__': 
-   print __doc__.strip()
+   print(__doc__.strip())

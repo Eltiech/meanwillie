@@ -595,12 +595,12 @@ class Table(object):
         cur = db.cursor()
         where = self._make_where_statement(key, row)
         cur.execute('SELECT * FROM ' + self.name + ' WHERE ' + where, rowl)
-        subs = list(values.iterkeys()) + list(values.itervalues())
+        subs = list(iter(values.keys())) + list(iter(values.values()))
         if not cur.fetchone():
             values[key] = row
             vals = ', '.join(('%s',) * len(values))
-            keys = ', '.join(values.iterkeys())
-            subs = list(values.itervalues())
+            keys = ', '.join(iter(values.keys()))
+            subs = list(iter(values.values()))
             command = ('INSERT INTO ' + self.name + ' (' + keys + ') VALUES (' +
                        vals + ');')
         else:

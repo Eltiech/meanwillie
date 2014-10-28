@@ -68,6 +68,6 @@ poni.commands = ['poni', 'pont']
 poni.priority = 'medium'
 
 if __name__ == '__main__':
-    print __doc__.strip()
+    print(__doc__.strip())
 
     
