@@ -604,10 +604,13 @@ class Table(object):
             command = ('INSERT INTO ' + self.name + ' (' + keys + ') VALUES (' +
                        vals + ');')
         else:
-            k_equals_v = ', '.join('%s = %s' * len(values))
+            kvlist = []
+            for i in values.keys():
+                kvlist.append('\''+i+'\' = %s')
+            k_equals_v = ', '.join(kvlist)
             command = 'UPDATE ' + self.name + ' SET ' + k_equals_v + ' WHERE ' + key + " = '" + row + "';"
-        command = command.replace('%s', self.db.substitution)
-        cur.execute(command, subs)
+        command = command.replace('%s', "("+self.db.substitution+")")
+        cur.execute(command, list(iter(values.values())))
         db.commit()
         db.close()
 
