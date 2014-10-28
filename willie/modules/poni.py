@@ -13,7 +13,7 @@ from willie.module import commands, example, NOLIMIT
 import willie.tools
 
 def filename(self):
-    return os.path.join(self.config.dotdir, "pont.db")
+    return os.path.join(self.config.homedir, "pont.db")
 def smartsay(bot,ep):
     series = ""
     if len(ep)==4:
