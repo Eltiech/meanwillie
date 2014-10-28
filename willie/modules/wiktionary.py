@@ -82,12 +82,12 @@ def wiktionary(bot, trigger):
     """Look up a word on Wiktionary."""
     word = trigger.group(2)
     if word is None:
-        bot.reply('You must tell me what to look up!')
+        bot.reply('Um, forgetting something?')
         return
 
     _etymology, definitions = wikt(word)
     if not definitions:
-        bot.say("Couldn't get any definitions for %s." % word)
+        bot.say("Hahaha. You think \"%s\" is a word!" % word)
         return
 
     result = format(word, definitions)

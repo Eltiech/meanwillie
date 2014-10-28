@@ -137,8 +137,8 @@ def weather(bot, trigger):
         if bot.db and trigger.nick in bot.db.preferences:
             woeid = bot.db.preferences.get(trigger.nick, 'woeid')
         if not woeid:
-            return bot.msg(trigger.sender, "I don't know where you live. " +
-                           'Give me a location, like .weather London, or tell me where you live by saying .setlocation London, for example.')
+            return bot.msg(trigger.sender, "Where the hell are you? " +
+                           'Give me a location, like .weather Equestria, or tell me where you live by saying .setlocation Equestria, for example.')
     else:
         location = location.strip()
         if bot.db and location in bot.db.preferences:
@@ -149,7 +149,7 @@ def weather(bot, trigger):
                 woeid = first_result.find('woeid').text
 
     if not woeid:
-        return bot.reply("I don't know where that is.")
+        return bot.reply("Oh, you actually think \"%s\" is a real place? How cute." % location)
 
     query = web.urlencode({'w': woeid, 'u': 'c'})
     url = 'http://weather.yahooapis.com/forecastrss?' + query
@@ -168,13 +168,13 @@ def weather(bot, trigger):
 def update_woeid(bot, trigger):
     """Set your default weather location."""
     if not trigger.group(2):
-        bot.reply('Give me a location, like "Washington, DC" or "London".')
+        bot.reply('Give me a real place, like "Washington, DC" or "London".')
         return NOLIMIT
 
     if bot.db:
         first_result = woeid_search(trigger.group(2))
         if first_result is None:
-            return bot.reply("I don't know where that is.")
+            return bot.reply("Oh, you actually think \"%s\" is a real place? How cute." % trigger.group(2))
 
         woeid = first_result.find('woeid').text
 

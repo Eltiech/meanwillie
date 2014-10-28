@@ -36,6 +36,6 @@ def isup(bot, trigger):
         return
 
     if response:
-        bot.say(site + ' looks fine to me.')
+        bot.say(site + ' is up for me, your connection just sucks.')
     else:
         bot.say(site + ' is down from here.')

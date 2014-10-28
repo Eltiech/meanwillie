@@ -49,7 +49,7 @@ def c(bot, trigger):
 def py(bot, trigger):
     """Evaluate a Python expression."""
     if not trigger.group(2):
-        return bot.say("Need an expression to evaluate")
+        return bot.say("Yes...and?")
 
     query = trigger.group(2)
     uri = 'http://tumbolia.appspot.com/py/'

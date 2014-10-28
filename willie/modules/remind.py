@@ -140,7 +140,7 @@ def remind(bot, trigger):
             reminder = reminder + piece
             stop = True
     if duration == 0:
-        return bot.reply("Sorry, didn't understand the input.")
+        return bot.reply("Okay how about not?")
 
     if duration % 1:
         duration = int(duration) + 1
@@ -163,7 +163,7 @@ def at(bot, trigger):
     regex = re.compile(r'(\d+):(\d+)(?::(\d+))?([^\s\d]+)? (.*)')
     match = regex.match(trigger.group(2))
     if not match:
-        bot.reply("Sorry, but I didn't understand your input.")
+        bot.reply("Equestrian, motherfucker, do you speak it?")
         return NOLIMIT
     hour, minute, second, tz, message = match.groups()
     if not second:
@@ -210,6 +210,6 @@ def create_reminder(bot, trigger, duration, message, tz):
         timef = willie.tools.format_time(bot.db, bot.config, tz, trigger.nick,
                                          trigger.sender, remind_at)
 
-        bot.reply('Okay, will remind at %s' % timef)
+        bot.reply('Can\'t you remember anything? I\'ll remind you at %s, if I feel like it.' % timef)
     else:
-        bot.reply('Okay, will remind in %s secs' % duration)
+        bot.reply('Are you really that forgetful? Guess we\'ll see in %s secs.' % duration)

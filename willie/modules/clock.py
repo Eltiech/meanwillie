@@ -47,7 +47,7 @@ def f_time(bot, trigger):
         zone = get_timezone(bot.db, bot.config, None, trigger.nick,
                             trigger.sender)
     time = format_time(bot.db, bot.config, zone, trigger.nick, trigger.sender)
-    bot.say(time)
+    bot.say("Oh, you cheaped out and got a computer without a clock? It's %s" % time)
 
 
 @commands('settz')

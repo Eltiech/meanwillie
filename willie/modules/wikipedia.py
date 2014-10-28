@@ -85,7 +85,7 @@ def wikipedia(bot, trigger):
             lang = customlang.group(2)
 
     if trigger.group(2) is None:
-        bot.reply("What do you want me to look up?")
+        bot.reply("Yes...and?")
         return NOLIMIT
 
     query = trigger.group(2)
@@ -100,11 +100,11 @@ def wikipedia(bot, trigger):
     server = lang + '.wikipedia.org'
     query = mw_search(server, query, 1)
     if not query:
-        bot.reply("I can't find any results for that.")
+        bot.reply("Oh, you actually think \"%s\" is a real topic? That's nice." % trigger.group(2))
         return NOLIMIT
     else:
         query = query[0]
     snippet = mw_snippet(server, query)
 
     query = query.replace(' ', '_')
-    bot.say('"%s" - http://%s.wikipedia.org/wiki/%s' % (snippet, lang, query))
+    bot.say('Can\'t work a web browser? Fine: "%s" - http://%s.wikipedia.org/wiki/%s' % (snippet, lang, query))

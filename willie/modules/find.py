@@ -41,7 +41,7 @@ def collectlines(bot, trigger):
     # Create a temporary list of the user's lines in a channel
     templist = bot.memory['find_lines'][trigger.sender][Nick(trigger.nick)]
     line = trigger.group()
-    if line.startswith("s/"):  # Don't remember substitutions
+    if line.startswith("s/") or line.startswith("S/"):  # Don't remember substitutions
         return
     elif line.startswith("\x01ACTION"):  # For /me messages
         line = line[:-1]
@@ -62,7 +62,7 @@ def collectlines(bot, trigger):
 @rule(r"""(?:
             (\S+)           # Catch a nick in group 1
           [:,]\s+)?         # Followed by colon/comma and whitespace, if given
-          s/                # The literal s/
+          (s/)                # The literal s/
           (                 # Group 2 is the thing to find
             (?:\\/ | [^/])+ # One or more non-slashes or escaped slashes
           )/(               # Group 3 is what to replace with
@@ -88,11 +88,11 @@ def findandreplace(bot, trigger):
 
     #TODO rest[0] is find, rest[1] is replace. These should be made variables of
     #their own at some point.
-    rest = [trigger.group(2), trigger.group(3)]
+    rest = [trigger.group(3), trigger.group(4)]
     rest[0] = rest[0].replace(r'\/', '/')
     rest[1] = rest[1].replace(r'\/', '/')
     me = False  # /me command
-    flags = (trigger.group(4) or '')
+    flags = (trigger.group(5) or '')
 
     # If g flag is given, replace all. Otherwise, replace once.
     if 'g' in flags:
@@ -102,12 +102,15 @@ def findandreplace(bot, trigger):
 
     # repl is a lambda function which performs the substitution. i flag turns
     # off case sensitivity. re.U turns on unicode replacement.
-    if 'i' in flags:
-        regex = re.compile(re.escape(rest[0]), re.U | re.I)
-        repl = lambda s: re.sub(regex, rest[1], s, count == 1)
+    if trigger.group(2).startswith('S'):
+        precomp = rest[0]
     else:
-        repl = lambda s: s.replace(rest[0], rest[1], count)
-
+        precomp = re.escape(rest[0])
+    if 'i' in flags:
+        regex = re.compile(precomp, re.U | re.I)
+    else:
+        regex = re.compile(precomp, re.U)
+    repl = lambda s: re.sub(regex, rest[1], s, count == 1)
     # Look back through the user's lines in the channel until you find a line
     # where the replacement works
     for line in reversed(search_dict[trigger.sender][rnick]):
