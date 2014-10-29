@@ -36,7 +36,7 @@ def setup(bot):
     # The rss_feeds table was added on 2013-07-17.
     try:
         c.execute('SELECT * FROM rss_feeds')
-    except StandardError:
+    except Exception:
         create_table(bot, c)
         migrate_from_old_tables(bot, c)
 
@@ -49,7 +49,7 @@ def setup(bot):
     # The modified column was added on 2013-07-21.
     try:
         c.execute('SELECT modified FROM rss_feeds')
-    except StandardError:
+    except Exception:
         c.execute('ALTER TABLE rss_feeds ADD modified TEXT')
         conn.commit()
 
@@ -86,7 +86,7 @@ def migrate_from_old_tables(bot, c):
     try:
         c.execute('SELECT * FROM rss')
         oldfeeds = c.fetchall()
-    except StandardError:
+    except Exception:
         oldfeeds = []
 
     for feed in oldfeeds:
@@ -99,7 +99,7 @@ def migrate_from_old_tables(bot, c):
                 WHERE channel = {0} AND site_name = {0}
                 '''.format(sub), (channel, site_name))
             article_title, article_url = c.fetchone()
-        except (StandardError, TypeError):
+        except (Exception, TypeError):
             article_title = article_url = None
 
         # add feed to new table
