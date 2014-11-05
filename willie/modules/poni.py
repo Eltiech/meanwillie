@@ -57,7 +57,7 @@ def poni(bot,trigger):
             return
         m = re.match(r"^(movie|episode)$",query)
         if m:
-            c = db.execute('SELECT season,episode,title,series FROM pont WHERE category = %s' % m.group(0)).fetchall()
+            c = db.execute('SELECT season,episode,title,series FROM pont WHERE category = "%s"' % m.group(0)).fetchall()
             smartsay(bot, random.choice(c))
             return
 
