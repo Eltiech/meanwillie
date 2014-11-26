@@ -13,7 +13,7 @@ def urbandictionary(bot, trigger):
 
     word = trigger.group(2)
     if not word:
-        bot.reply("You didn't give me a word...")
+        bot.reply("Whats the matter, cat got your tongue?")
         return NOLIMIT
 
     data = json.loads(web.get('http://api.urbandictionary.com/v0/define?term=%s' % web.quote(word)))
