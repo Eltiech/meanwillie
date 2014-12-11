@@ -25,7 +25,7 @@ def slap(willie, trigger):
     safeNickPieces = list(set(nicklikePieces).intersection(safeNicks))
     if safeNickPieces:
         if (trigger.nick not in safeNicks):
-            backfireRegex = re.compile('(' + '|'.join(map(re.escape,safeNickPieces)) + ')',flags=re.IGNORECASE)
+            backfireRegex = re.compile(r'(\b' + r'\b|\b'.join(map(re.escape,safeNickPieces)) + r'\b)',flags=re.IGNORECASE)
             text[1] = re.sub(backfireRegex,trigger.nick,text[1])
     #todo: reimplement previous version's autoconverting of the bot's own nick to 'itself'
     #maybe we should give the bot a gender config option?
