@@ -22,6 +22,8 @@ def slap(willie, trigger):
     safeNicks.append("herself")
     safeNicks.append("himself")
     safeNicks.append("itself")
+    safeNicks.append("dicks")
+    safeNicks.append("butts")
     safeNickPieces = list(set(nicklikePieces).intersection(safeNicks))
     if safeNickPieces:
         if (trigger.nick not in safeNicks):
@@ -42,7 +44,7 @@ def slap(willie, trigger):
       "wing-slaps",
       "wing-attacks",
       "hoof-stomps",
-      "Berry Punches",
+      "punches",
 #      "laser beams", #doesn't really fit our bot
       "bucks",
       "suplexes",
@@ -70,6 +72,10 @@ def slap(willie, trigger):
       "stabs",
       "cuts",
       "dumps water on",
+      "punts",
+      "violently ignores",
+      "whips",
+      "vivisects",
     ]
 
     verb = random.choice(attacks)
