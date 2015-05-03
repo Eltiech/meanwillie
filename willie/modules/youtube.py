@@ -1,203 +1,199 @@
 # coding=utf8
+
 """
-youtube.py - Willie YouTube Module
-Copyright 2012, Dimitri Molenaars, Tyrope.nl.
-Copyright © 2012-2014, Elad Alfassa, <elad@fedoraproject.org>
-Copyright 2012, Edward Powell, embolalia.net
-Licensed under the Eiffel Forum License 2.
+youtube.py - Willie YouTube v3 Module
+Copyright (c) 2015 Calvin Montgomery, All rights reserved.
 
-http://willie.dfbta.net
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
 
-This module will respond to .yt and .youtube commands and searches the youtubes.
+Redistributions of source code must retain the above copyright notice, this list
+of conditions and the following disclaimer. Redistributions in binary form must
+reproduce the above copyright notice, this list of conditions and the following
+disclaimer in the documentation and/or other materials provided with the
+distribution. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+
+Behavior based on the original YouTube module by the following authors:
+Dimitri Molenaars, Tyrope.nl.
+Elad Alfassa, <elad@fedoraproject.org>
+Edward Powell, embolalia.net
+
+Usage:
+
+    1. Go to https://console.developers.google.com/project
+    2. Create a new API project
+    3. On the left sidebar, click "Credentials" under "APIs & auth"
+    4. Click "Create new Key" under "Public API access"
+    5. Click "Server key"
+    6. Under "APIs & auth" click "YouTube Data API" and then click "Enable API"
+
+Once the key has been generated, add the following to your willie config
+(replace dummy_key with the key obtained from the API console):
+
+[youtube]
+api_key = dummy_key
+
 """
-from __future__ import unicode_literals
 
-from willie import web, tools
-from willie.module import rule, commands, example
+import datetime
 import json
 import re
 import sys
-if sys.version_info.major < 3:
-    from HTMLParser import HTMLParser
-else:
-    from html.parser import HTMLParser
+from willie import web, tools
+from willie.module import rule, commands, example
 
-regex = re.compile('(youtube.com/watch\S*v=|youtu.be/)([\w-]+)')
+URL_REGEX = re.compile(r'(youtube.com/watch\S*v=|youtu.be/)([\w-]+)')
+INFO_URL = ('https://www.googleapis.com/youtube/v3/videos'
+            '?key={}&part=contentDetails,status,snippet,statistics&id={}')
+SEARCH_URL = ('https://www.googleapis.com/youtube/v3/search'
+              '?key={}&part=id&maxResults=1&q={}&type=youtube%23video')
 
+class YouTubeError(Exception):
+    pass
 
 def setup(bot):
     if not bot.memory.contains('url_callbacks'):
         bot.memory['url_callbacks'] = tools.WillieMemory()
-    bot.memory['url_callbacks'][regex] = ytinfo
-
+    bot.memory['url_callbacks'][URL_REGEX] = youtube_info
 
 def shutdown(bot):
-    del bot.memory['url_callbacks'][regex]
+    del bot.memory['url_callbacks'][URL_REGEX]
 
+def get_api_key(bot):
+    if not bot.config.has_option('youtube', 'api_key'):
+        raise KeyError('Missing YouTube API key')
+    return bot.config.youtube.api_key
 
-def ytget(bot, trigger, uri):
-    bytes = web.get(uri)
-    result = json.loads(bytes)
-    try:
-        if 'feed' in result:
-            video_entry = result['feed']['entry'][0]
-        else:
-            video_entry = result['entry']
-    except KeyError:
-        return {'link': 'N/A'}  # Empty result
+def configure(config):
+    if config.option('Configure YouTube v3 API', False):
+        config.interactive_add('youtube', 'api_key', 'Google Developers '
+                'Console API key (Server key)')
 
-    vid_info = {}
-    try:
-        # The ID format is tag:youtube.com,2008:video:RYlCVwxoL_g
-        # So we need to split by : and take the last item
-        vid_id = video_entry['id']['$t'].split(':')
-        vid_id = vid_id[len(vid_id) - 1]  # last item is the actual ID
-        vid_info['link'] = 'http://youtu.be/' + vid_id
-    except KeyError:
-        vid_info['link'] = 'N/A'
+def convert_date(date):
+    """Parses an ISO 8601 datestamp and reformats it to be a bit nicer"""
+    date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.000Z')
+    return date.strftime('%Y-%m-%d %H:%M:%S UTC')
 
-    try:
-        vid_info['title'] = video_entry['title']['$t']
-    except KeyError:
-        vid_info['title'] = 'N/A'
+def convert_duration(duration):
+    """Converts an ISO 8601 duration to a human-readable duration"""
+    units = {
+        'hour': 0,
+        'minute': 0,
+        'second': 0
+    }
+    for symbol, unit in zip(('H', 'M', 'S'), ('hour', 'minute', 'second')):
+        match = re.search(r'(\d+)' + symbol, duration)
+        if match:
+            units[unit] = int(match.group(1))
 
-    #get youtube channel
-    try:
-        vid_info['uploader'] = video_entry['author'][0]['name']['$t']
-    except KeyError:
-        vid_info['uploader'] = 'N/A'
+    time = datetime.time(**units)
+    output = str(time)
+    match = re.search('(\d+)D', duration)
+    if match:
+        output = match.group(1) + ' days, ' + output
+    return output
 
-    #get upload time in format: yyyy-MM-ddThh:mm:ss.sssZ
-    try:
-        upraw = video_entry['published']['$t']
-        #parse from current format to output format: DD/MM/yyyy, hh:mm
-        vid_info['uploaded'] = '%s/%s/%s, %s:%s' % (upraw[8:10], upraw[5:7],
-                                                  upraw[0:4], upraw[11:13],
-                                                  upraw[14:16])
-    except KeyError:
-        vid_info['uploaded'] = 'N/A'
+def fetch_video_info(bot, id):
+    """Retrieves video metadata from YouTube"""
+    url = INFO_URL.format(get_api_key(bot), id)
+    result = json.loads(web.get(url))
 
-    #get duration in seconds
-    try:
-        duration = int(video_entry['media$group']['yt$duration']['seconds'])
-        #Detect liveshow + parse duration into proper time format.
-        if duration < 1:
-            vid_info['length'] = 'LIVE'
-        else:
-            hours = duration // (60 * 60)
-            minutes = duration // 60 - (hours * 60)
-            seconds = duration % 60
-            vid_info['length'] = ''
-            if hours:
-                vid_info['length'] = str(hours) + 'hours'
-                if minutes or seconds:
-                    vid_info['length'] = vid_info['length'] + ' '
-            if minutes:
-                vid_info['length'] = vid_info['length'] + str(minutes) + 'mins'
-                if seconds:
-                    vid_info['length'] = vid_info['length'] + ' '
-            if seconds:
-                vid_info['length'] = vid_info['length'] + str(seconds) + 'secs'
-    except KeyError:
-        vid_info['length'] = 'N/A'
+    if 'error' in result:
+        raise YouTubeError(result['error']['message'])
 
-    #get views
-    try:
-        views = video_entry['yt$statistics']['viewCount']
-        vid_info['views'] = str('{0:20,d}'.format(int(views))).lstrip(' ')
-    except KeyError:
-        vid_info['views'] = 'N/A'
+    if len(result['items']) == 0:
+        raise YouTubeError('YouTube API returned empty result')
 
-    #get comment count
-    try:
-        comments = video_entry['gd$comments']['gd$feedLink']['countHint']
-        vid_info['comments'] = str('{0:20,d}'.format(int(comments))).lstrip(' ')
-    except KeyError:
-        vid_info['comments'] = 'N/A'
+    video = result['items'][0]
+    info = {
+        'title': video['snippet']['title'],
+        'uploader': video['snippet']['channelTitle'],
+        'uploaded': convert_date(video['snippet']['publishedAt']),
+        'duration': convert_duration(video['contentDetails']['duration']),
+        'views': video['statistics']['viewCount'],
+        'comments': video['statistics']['commentCount'],
+        'likes': video['statistics']['likeCount'],
+        'dislikes': video['statistics']['dislikeCount'],
+        'link': 'https://youtu.be/' + video['id']
+    }
 
-    #get likes & dislikes
-    try:
-        likes = video_entry['yt$rating']['numLikes']
-        vid_info['likes'] = str('{0:20,d}'.format(int(likes))).lstrip(' ')
-    except KeyError:
-        vid_info['likes'] = 'N/A'
-    try:
-        dislikes = video_entry['yt$rating']['numDislikes']
-        vid_info['dislikes'] = str('{0:20,d}'.format(int(dislikes))).lstrip(' ')
-    except KeyError:
-        vid_info['dislikes'] = 'N/A'
-    return vid_info
+    return info
 
+def fix_count(count):
+    """Adds commas to a number representing a count"""
+    return '{:,}'.format(int(count))
 
-@commands('yt', 'youtube')
-@example('.yt how to be a nerdfighter FAQ')
-def ytsearch(bot, trigger):
-    """Search YouTube"""
-    #modified from ytinfo: Copyright 2010-2011, Michael Yanovich, yanovich.net, Kenneth Sham.
-    if not trigger.group(2):
-        return
-    uri = 'https://gdata.youtube.com/feeds/api/videos?v=2&alt=json&max-results=1&q=' + trigger.group(2)
-    video_info = ytget(bot, trigger, uri)
+def format_info(tag, info, include_link=False):
+    """Formats video information for sending to IRC.
 
-    if video_info is 'err':
-        return
+    If include_link is True, then the video link will be included in the
+    output (this is useful for search results), otherwise it is not (no
+    reason to include a link if we are simply printing information about
+    a video that was already linked in chat).
+    """
+    output = [
+        '[{}] Title: {}'.format(tag, info['title']),
+        'Uploader: ' + info['uploader'],
+        'Uploaded: ' + info['uploaded'],
+        'Duration: ' + info['duration'],
+        'Views: ' + fix_count(info['views']),
+        'Comments: ' + fix_count(info['comments']),
+        'Likes: ' + fix_count(info['likes']),
+        'Dislikes: ' + fix_count(info['dislikes'])
+    ]
 
-    if video_info['link'] == 'N/A':
-        bot.say("Sorry, I couldn't find the video you are looking for")
-        return
-    message = ('[YT Search] Title: ' + video_info['title'] +
-              ' | Uploader: ' + video_info['uploader'] +
-              ' | Duration: ' + video_info['length'] +
-              ' | Uploaded: ' + video_info['uploaded'] +
-              ' | Views: ' + video_info['views'] +
-              ' | Link: ' + video_info['link'])
+    if include_link:
+        output.append('Link: ' + info['link'])
 
-    bot.say(HTMLParser().unescape(message))
-
+    return ' | '.join(output)
 
 @rule('.*(youtube.com/watch\S*v=|youtu.be/)([\w-]+).*')
-def ytinfo(bot, trigger, found_match=None):
-    """
-    Get information about the latest video uploaded by the channel provided.
-    """
+def youtube_info(bot, trigger, found_match=None):
+    """Catches youtube links said in chat and fetches video information"""
     match = found_match or trigger
-    #Grab info from YT API
-    uri = 'https://gdata.youtube.com/feeds/api/videos/' + match.group(2) + '?v=2&alt=json'
-
-    video_info = ytget(bot, trigger, uri)
-    if video_info is 'err':
+    try:
+        info = fetch_video_info(bot, match.group(2))
+    except YouTubeError as e:
+        bot.say('[YouTube] Lookup failed: {}'.format(e))
         return
+    bot.say(format_info('YouTube', info))
 
-    #combine variables and print
-    message = '[YouTube] Title: ' + video_info['title'] + \
-              ' | Uploader: ' + video_info['uploader'] + \
-              ' | Uploaded: ' + video_info['uploaded'] + \
-              ' | Duration: ' + video_info['length'] + \
-              ' | Views: ' + video_info['views'] + \
-              ' | Comments: ' + video_info['comments'] + \
-              ' | Likes: ' + video_info['likes'] + \
-              ' | Dislikes: ' + video_info['dislikes']
-
-    bot.say(HTMLParser().unescape(message))
-
-
-@commands('ytlast', 'ytnew', 'ytlatest')
-@example('.ytlast vlogbrothers')
-def ytlast(bot, trigger):
+@commands('yt', 'youtube')
+@example('.yt Mystery Skulls - Ghost')
+def ytsearch(bot, trigger):
+    """Allows users to search for YouTube videos with .yt <search query>"""
     if not trigger.group(2):
         return
-    uri = 'https://gdata.youtube.com/feeds/api/users/' + trigger.group(2) + '/uploads?max-results=1&alt=json&v=2'
-    video_info = ytget(bot, trigger, uri)
 
-    if video_info is 'err':
+    # Note that web.get() quotes the query parameters, so the
+    # trigger is purposely left unquoted (double-quoting breaks things)
+    url = SEARCH_URL.format(get_api_key(bot), trigger.group(2))
+    result = json.loads(web.get(url))
+    if 'error' in result:
+        bot.say('[YouTube Search] ' + result['error']['message'])
         return
 
-    message = ('[Latest Video] Title: ' + video_info['title'] +
-              ' | Duration: ' + video_info['length'] +
-              ' | Uploaded: ' + video_info['uploaded'] +
-              ' | Views: ' + video_info['views'] +
-              ' | Likes: ' + video_info['likes'] +
-              ' | Dislikes: ' + video_info['dislikes'] +
-              ' | Link: ' + video_info['link'])
+    if len(result['items']) == 0:
+        bot.say('[YouTube Search] No results for ' + trigger.group(2))
+        return
 
-    bot.say(HTMLParser().unescape(message))
+    # YouTube v3 API does not include useful video metadata in search results.
+    # Searching gives us the video ID, now we have to do a regular lookup to
+    # get the information we want.
+    try:
+        info = fetch_video_info(bot, result['items'][0]['id']['videoId'])
+    except YouTubeError as e:
+        bot.say('[YouTube] Lookup failed: {}'.format(e))
+        return
+
+    bot.say(format_info('YouTube Search', info, include_link=True))
