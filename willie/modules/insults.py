@@ -20,7 +20,9 @@ def thanks(willie, input):
      'Go swivel',
      'I\'ve had my genitals on live television, I don\'t need your crap',
      'You\'re not my real mom',
-     'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+     'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+     'Go eat 40 dicks', 
+     'I don't give a fuck about what you have to say'
    ))
    comma = random.choice((' ', ', '))
    punctuation = random.choice(('', '!'))
