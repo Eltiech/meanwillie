@@ -106,7 +106,8 @@ def convert_duration(duration):
 def fetch_video_info(bot, id):
     """Retrieves video metadata from YouTube"""
     url = INFO_URL.format(get_api_key(bot), id)
-    result = json.loads(web.get(url))
+    raw = web.get(url)
+    result = json.loads(raw)
 
     if 'error' in result:
         raise YouTubeError(result['error']['message'])
@@ -142,20 +143,20 @@ def format_info(tag, info, include_link=False):
     a video that was already linked in chat).
     """
     output = [
-        '[{}] Title: {}'.format(tag, info['title']),
-        'Uploader: ' + info['uploader'],
-        'Uploaded: ' + info['uploaded'],
-        'Duration: ' + info['duration'],
-        'Views: ' + fix_count(info['views']),
-        'Comments: ' + fix_count(info['comments']),
-        'Likes: ' + fix_count(info['likes']),
-        'Dislikes: ' + fix_count(info['dislikes'])
+        u'[{}] Title: {}'.format(tag, info['title']),
+        u'Uploader: ' + info['uploader'],
+        u'Uploaded: ' + info['uploaded'],
+        u'Duration: ' + info['duration'],
+        u'Views: ' + fix_count(info['views']),
+        u'Comments: ' + fix_count(info['comments']),
+        u'Likes: ' + fix_count(info['likes']),
+        u'Dislikes: ' + fix_count(info['dislikes'])
     ]
 
     if include_link:
-        output.append('Link: ' + info['link'])
+        output.append(u'Link: ' + info['link'])
 
-    return ' | '.join(output)
+    return u' | '.join(output)
 
 @rule('.*(youtube.com/watch\S*v=|youtu.be/)([\w-]+).*')
 def youtube_info(bot, trigger, found_match=None):
@@ -164,7 +165,7 @@ def youtube_info(bot, trigger, found_match=None):
     try:
         info = fetch_video_info(bot, match.group(2))
     except YouTubeError as e:
-        bot.say('[YouTube] Lookup failed: {}'.format(e))
+        bot.say(u'[YouTube] Lookup failed: {}'.format(e))
         return
     bot.say(format_info('YouTube', info))
 
@@ -180,11 +181,11 @@ def ytsearch(bot, trigger):
     url = SEARCH_URL.format(get_api_key(bot), trigger.group(2))
     result = json.loads(web.get(url))
     if 'error' in result:
-        bot.say('[YouTube Search] ' + result['error']['message'])
+        bot.say(u'[YouTube Search] ' + result['error']['message'])
         return
 
     if len(result['items']) == 0:
-        bot.say('[YouTube Search] No results for ' + trigger.group(2))
+        bot.say(u'[YouTube Search] No results for ' + trigger.group(2))
         return
 
     # YouTube v3 API does not include useful video metadata in search results.
@@ -193,7 +194,7 @@ def ytsearch(bot, trigger):
     try:
         info = fetch_video_info(bot, result['items'][0]['id']['videoId'])
     except YouTubeError as e:
-        bot.say('[YouTube] Lookup failed: {}'.format(e))
+        bot.say(u'[YouTube] Lookup failed: {}'.format(e))
         return
 
     bot.say(format_info('YouTube Search', info, include_link=True))
