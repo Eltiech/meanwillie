@@ -53,7 +53,7 @@ def poni(bot,trigger):
             smartsay(bot, random.choice(c))
             return
         if query == "help":
-            bot.say("usage: .poni (s1|s2|s3|s4|rdp|mas|fiw|other|all|noncanon|movie|episode)")
+            bot.say("usage: .poni (s1|s2|s3|s4|s5|rdp|mas|fiw|other|all|noncanon|movie|episode)")
             return
         m = re.match(r"^(movie|episode)$",query)
         if m:
